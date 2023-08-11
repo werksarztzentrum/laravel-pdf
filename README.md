@@ -1,7 +1,10 @@
-# Laravel PDF: mPDF wrapper for Laravel 5
+# Laravel PDF: mPDF wrapper for Laravel
 
 > Easily generate PDF documents from HTML right inside of Laravel using this mPDF wrapper.
 
+## Supported versions
+
+Minimum supported version is Laravel 5
 
 ## Installation
 
@@ -18,7 +21,7 @@ To start using Laravel, add the Service Provider and the Facade to your `config/
 ```php
 'providers' => [
 	// ...
-	niklasravnsborg\LaravelPdf\PdfServiceProvider::class
+	niklasravnsborg\LaravelPdf\Providers\PdfServiceProvider::class
 ]
 ```
 
@@ -153,6 +156,17 @@ Now you can use the font in CSS:
 body {
 	font-family: 'examplefont', sans-serif;
 }
+```
+
+## Custom Styles
+You can use your own styles in the generated PDFs. The css file have to be located in one folder, e.g. `/public/css/`. Add this to your configuration file (`/config/pdf.php`):
+
+```php
+return [
+	...
+    	'defaultCssFile' => base_path('public/css/pdf.css'),
+    	...
+];
 ```
 
 ## Set Protection

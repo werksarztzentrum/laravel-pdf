@@ -4,6 +4,7 @@ namespace niklasravnsborg\LaravelPdf;
 
 use Config;
 use Mpdf;
+use Mpdf\Output\Destination;
 
 /**
  * Laravel PDF: mPDF wrapper for Laravel 5
@@ -11,11 +12,20 @@ use Mpdf;
  * @package laravel-pdf
  * @author Niklas Ravnsborg-Gjertsen
  */
-class Pdf {
-
+class Pdf implements PdfInterface
+{
+	/**
+	 * @var array|mixed
+	 */
 	protected $config = [];
 
-	public function __construct($html = '', $config = [])
+	/**
+	 * @param string $html
+	 * @param array $config
+	 *
+	 * @throws \Mpdf\MpdfException
+	 */
+	public function __construct(string $html = '', array $config = [])
 	{
 		$this->config = $config;
 
@@ -32,8 +42,13 @@ class Pdf {
 			'margin_header'     => $this->getConfig('margin_header'),     // Set the page margins for the new document.
 			'margin_footer'     => $this->getConfig('margin_footer'),     // Set the page margins for the new document.
 			'orientation'       => $this->getConfig('orientation'),       // This attribute specifies the default page orientation of the new document if format is defined as an array. This value will be ignored if format is a string value.
-			'tempDir'           => $this->getConfig('tempDir')            // temporary directory
+			'tempDir'           => $this->getConfig('tempDir'),           // Temporary directory
 		];
+
+		$defaultCssFile = $this->getConfig('defaultCssFile');             // Set Default Style Sheet
+		if (file_exists($defaultCssFile)) {
+			$mpdf_config['defaultCssFile'] = $defaultCssFile;
+		}
 
 		// Handle custom fonts
 		$mpdf_config = $this->addCustomFontsConfig($mpdf_config);
@@ -66,19 +81,29 @@ class Pdf {
 		$this->mpdf->WriteHTML($html);
 	}
 
-	protected function getConfig($key)
+	/**
+	 * @param string $key
+	 *
+	 * @return mixed
+	 */
+	protected function getConfig(string $key)
 	{
 		if (isset($this->config[$key])) {
 			return $this->config[$key];
-		} else {
-			return Config::get('pdf.' . $key);
 		}
+
+		return Config::get('pdf.' . $key);
 	}
 
-	protected function addCustomFontsConfig($mpdf_config)
+	/**
+	 * @param array $mpdfConfig
+	 *
+	 * @return array
+	 */
+	protected function addCustomFontsConfig(array $mpdfConfig): array
 	{
 		if (!Config::has('pdf.font_path') || !Config::has('pdf.font_data')) {
-			return $mpdf_config;
+			return $mpdfConfig;
 		}
 
 		// Get default font configuration
@@ -86,27 +111,32 @@ class Pdf {
 		$fontData = (new Mpdf\Config\FontVariables())->getDefaults()['fontdata'];
 
 		// Merge default with custom configuration
-		$mpdf_config['fontDir'] = array_merge($fontDirs, [Config::get('pdf.font_path')]);
-		$mpdf_config['fontdata'] = array_merge($fontData, Config::get('pdf.font_data'));
+		$mpdfConfig['fontDir'] = array_merge($fontDirs, [Config::get('pdf.font_path')]);
+		$mpdfConfig['fontdata'] = array_merge($fontData, Config::get('pdf.font_data'));
 
-		return $mpdf_config;
+		return $mpdfConfig;
 	}
 
 	/**
 	 * Encrypts and sets the PDF document permissions
 	 *
-	 * @param array $permisson Permissons e.g.: ['copy', 'print']
+	 * @param array $permission Permissons e.g.: ['copy', 'print']
 	 * @param string $userPassword User password
 	 * @param string $ownerPassword Owner password
-	 * @return static
 	 *
+	 * @return mixed
 	 */
-	public function setProtection($permisson, $userPassword = '', $ownerPassword = '')
+	public function setProtection(array $permission, string $userPassword = '', string $ownerPassword = '')
 	{
 		if (func_get_args()[2] === NULL) {
 			$ownerPassword = bin2hex(openssl_random_pseudo_bytes(8));
 		};
-		return $this->mpdf->SetProtection($permisson, $userPassword, $ownerPassword);
+
+		return $this->mpdf->SetProtection(
+			$permission,
+			$userPassword,
+			$ownerPassword
+		);
 	}
 
 	/**
@@ -116,39 +146,42 @@ class Pdf {
 	 */
 	public function output()
 	{
-		return $this->mpdf->Output('', 'S');
+		return $this->mpdf->Output('', Destination::STRING_RETURN);
 	}
 
 	/**
 	 * Save the PDF to a file
 	 *
 	 * @param $filename
-	 * @return static
+	 *
+	 * @return void
 	 */
-	public function save($filename)
+	public function save(string $filename)
 	{
-		return $this->mpdf->Output($filename, 'F');
+		return $this->mpdf->Output($filename, Destination::FILE);
 	}
 
 	/**
 	 * Make the PDF downloadable by the user
 	 *
 	 * @param string $filename
-	 * @return \Symfony\Component\HttpFoundation\Response
+	 *
+	 * @return void
 	 */
-	public function download($filename = 'document.pdf')
+	public function download(string $filename = 'document.pdf')
 	{
-		return $this->mpdf->Output($filename, 'D');
+		return $this->mpdf->Output($filename, Destination::DOWNLOAD);
 	}
 
 	/**
 	 * Return a response with the PDF to show in the browser
 	 *
 	 * @param string $filename
-	 * @return \Symfony\Component\HttpFoundation\Response
+	 *
+	 * @return void
 	 */
-	public function stream($filename = 'document.pdf')
+	public function stream(string $filename = 'document.pdf')
 	{
-		return $this->mpdf->Output($filename, 'I');
+		return $this->mpdf->Output($filename, Destination::INLINE);
 	}
 }

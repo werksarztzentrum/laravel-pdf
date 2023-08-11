@@ -5,21 +5,35 @@ namespace niklasravnsborg\LaravelPdf\Test;
 use PDF;
 use Imagick;
 
-class PdfTest extends TestCase
+class PdfTest extends PdfTestCase
 {
+	/**
+	 * @return void
+	 */
 	public function testSimplePdfIsCorrect()
 	{
 		$pdf = PDF::loadHTML('<p>This gets tested!</p>');
+
 		$this->compareToSnapshot('simple', $pdf->output());
 	}
 
+	/**
+	 * @return void
+	 */
 	public function testExposifyPdfExposeIsCorrect()
 	{
 		$pdf = PDF::loadFile('tests/views/exposify-expose.html');
+
 		$this->compareToSnapshot('exposify', $pdf->output());
 	}
 
-	protected function compareToSnapshot($snapshotId, $data)
+	/**
+	 * @param string $snapshotId
+	 * @param mixed $data
+	 *
+	 * @return void
+	 */
+	protected function compareToSnapshot(string $snapshotId,  $data): void
 	{
 		$snapshotFile = "tests/snapshots/{$snapshotId}.pdf";
 
@@ -33,12 +47,21 @@ class PdfTest extends TestCase
 		$this->assertPdfsLookTheSame($snapshot, $data);
 	}
 
-	public function assertPdfsLookTheSame($pdf1, $pdf2, $message = '')
+	/**
+	 * @param mixed $pdf1
+	 * @param mixed $pdf2
+	 *
+	 * @return void
+	 *
+	 * @throws \ImagickException
+	 */
+	protected function assertPdfsLookTheSame($pdf1, $pdf2): void
 	{
 		$assertedImagick = new Imagick();
 		$assertedImagick->readImageBlob($pdf1);
 		$assertedImagick->resetIterator();
 		$assertedImagick = $assertedImagick->appendImages(true);
+
 		$testImagick = new Imagick();
 		$testImagick->readImageBlob($pdf2);
 		$testImagick->resetIterator();
@@ -46,6 +69,7 @@ class PdfTest extends TestCase
 
 		$diff = $assertedImagick->compareImages($testImagick, 1);
 		$pdfsLookTheSame = 0.0 == $diff[1];
+
 		self::assertTrue($pdfsLookTheSame, 'Failed asserting that PDFs look the same.');
 	}
 }
